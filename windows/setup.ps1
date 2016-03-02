@@ -41,18 +41,18 @@ foreach ($adapter in $ActiveNetcfg)
     default_gateway = $null
     interface_index = $adapter.InterfaceIndex
     }
-    
+
     if ($adapter.defaultIPGateway)
     {
         $thisadapter.default_gateway = $adapter.DefaultIPGateway[0].ToString()
     }
-    
+
     $formattednetcfg += $thisadapter;$thisadapter = $null
 }
 
 Set-Attr $result.ansible_facts "ansible_interfaces" $formattednetcfg
 
-Set-Attr $result.ansible_facts "ansible_architecture" $win32_os.OSArchitecture 
+Set-Attr $result.ansible_facts "ansible_architecture" $win32_os.OSArchitecture
 
 Set-Attr $result.ansible_facts "ansible_hostname" $env:COMPUTERNAME;
 Set-Attr $result.ansible_facts "ansible_fqdn" "$([System.Net.Dns]::GetHostByName((hostname)).HostName)"
@@ -68,6 +68,7 @@ Set-Attr $date "year" (Get-Date -format yyyy)
 Set-Attr $date "month" (Get-Date -format MM)
 Set-Attr $date "day" (Get-Date -format dd)
 Set-Attr $date "hour" (Get-Date -format HH)
+Set-Attr $date "minute" (Get-Date -format mm)
 Set-Attr $date "iso8601" (Get-Date -format s)
 Set-Attr $result.ansible_facts "ansible_date_time" $date
 
@@ -79,6 +80,16 @@ Set-Attr $result.ansible_facts "ansible_uptime_seconds" $([System.Convert]::ToIn
 $ips = @()
 Foreach ($ip in $netcfg.IPAddress) { If ($ip) { $ips += $ip } }
 Set-Attr $result.ansible_facts "ansible_ip_addresses" $ips
+
+$env_vars = New-Object psobject
+foreach ($item in Get-ChildItem Env:)
+{
+    $name = $item | select -ExpandProperty Name
+    # Powershell ConvertTo-Json fails if string ends with \
+    $value = ($item | select -ExpandProperty Value).TrimEnd("\")
+    Set-Attr $env_vars $name $value
+}
+Set-Attr $result.ansible_facts "ansible_env" $env_vars
 
 $psversion = $PSVersionTable.PSVersion.Major
 Set-Attr $result.ansible_facts "ansible_powershell_version" $psversion
@@ -110,9 +121,28 @@ if ($winrm_cert_thumbprint)
 
 $winrm_cert_expiry = Get-ChildItem -Path Cert:\LocalMachine\My | where Thumbprint -EQ $uppercase_cert_thumbprint | select NotAfter
 
-if ($winrm_cert_expiry) 
+if ($winrm_cert_expiry)
 {
     Set-Attr $result.ansible_facts "ansible_winrm_certificate_expires" $winrm_cert_expiry.NotAfter.ToString("yyyy-MM-dd HH:mm:ss")
+}
+
+# See if Facter is on the System Path
+Try {
+    $facter_exe = Get-Command facter -ErrorAction Stop
+    $facter_installed = $true
+}
+Catch {
+    $facter_installed = $false
+}
+
+# Get JSON from Facter, and parse it out.
+if ($facter_installed) {
+    &facter -j | Tee-Object  -Variable facter_output | Out-Null
+    $facts = "$facter_output" | ConvertFrom-Json
+    ForEach($fact in $facts.PSObject.Properties) {
+        $fact_name = $fact.Name
+        Set-Attr $result.ansible_facts "facter_$fact_name" $fact.Value
+    }
 }
 
 Exit-Json $result;

@@ -44,6 +44,10 @@ $skip_certificate_validation = Get-Attr $params "skip_certificate_validation" $f
 $username = Get-Attr $params "username"
 $password = Get-Attr $params "password"
 
+$proxy_url = Get-Attr $params "proxy_url"
+$proxy_username = Get-Attr $params "proxy_username"
+$proxy_password = Get-Attr $params "proxy_password"
+
 if($skip_certificate_validation){
   [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
 }
@@ -51,14 +55,22 @@ if($skip_certificate_validation){
 $force = Get-Attr -obj $params -name "force" "yes" | ConvertTo-Bool
 
 If ($force -or -not (Test-Path $dest)) {
-    $client = New-Object System.Net.WebClient
+    $webClient = New-Object System.Net.WebClient
+    if($proxy_url) {
+        $proxy_server = New-Object System.Net.WebProxy($proxy_url, $true)
+        if($proxy_username -and $proxy_password){
+            $proxy_credential = New-Object System.Net.NetworkCredential($proxy_username, $proxy_password)
+            $proxy_server.Credentials = $proxy_credential
+        }
+        $webClient.Proxy = $proxy_server
+    }
 
     if($username -and $password){
-        $client.Credentials = New-Object System.Net.NetworkCredential($username, $password)
+        $webClient.Credentials = New-Object System.Net.NetworkCredential($username, $password)
     }
 
     Try {
-        $client.DownloadFile($url, $dest)
+        $webClient.DownloadFile($url, $dest)
         $result.changed = $true
     }
     Catch {
@@ -77,7 +89,7 @@ Else {
         $webRequest.Method = "GET"
         [System.Net.HttpWebResponse]$webResponse = $webRequest.GetResponse()
         
-        $stream = New-Object System.IO.StreamReader($response.GetResponseStream())
+        $stream = New-Object System.IO.StreamReader($webResponse.GetResponseStream())
         
         $stream.ReadToEnd() | Set-Content -Path $dest -Force -ErrorAction Stop
         

@@ -47,12 +47,12 @@ options:
     default: null
   creates:
     description:
-      - a filename or glob pattern, when it already exists, this step will B(not) be run.
+      - a filename or (since 2.0) glob pattern, when it already exists, this step will B(not) be run.
     required: no
     default: null
   removes:
     description:
-      - a filename or glob pattern, when it does not exist, this step will B(not) be run.
+      - a filename or (since 2.0) glob pattern, when it does not exist, this step will B(not) be run.
     version_added: "0.8"
     required: no
     default: null
@@ -74,7 +74,6 @@ options:
     description:
       - if command warnings are on in ansible.cfg, do not warn about this particular line if set to no/false.
     required: false
-    default: True
 notes:
     -  If you want to run a command through the shell (say you are using C(<),
        C(>), C(|), etc), you actually want the M(shell) module instead. The
@@ -140,9 +139,9 @@ def check_command(commandline):
                   'rmdir': 'state=absent', 'rm': 'state=absent', 'touch': 'state=touch' }
     commands  = { 'git': 'git', 'hg': 'hg', 'curl': 'get_url', 'wget': 'get_url',
                   'svn': 'subversion', 'service': 'service',
-                  'mount': 'mount', 'rpm': 'yum', 'yum': 'yum', 'apt-get': 'apt-get',
+                  'mount': 'mount', 'rpm': 'yum, dnf or zypper', 'yum': 'yum', 'apt-get': 'apt-get',
                   'tar': 'unarchive', 'unzip': 'unarchive', 'sed': 'template or lineinfile',
-                  'rsync': 'synchronize' }
+                  'rsync': 'synchronize', 'dnf': 'dnf', 'zypper': 'zypper' }
     become   = [ 'sudo', 'su', 'pbrun', 'pfexec', 'runas' ]
     warnings = list()
     command = os.path.basename(commandline.split()[0])

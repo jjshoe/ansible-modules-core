@@ -318,7 +318,6 @@ def deregister_image(module, ec2):
         module.fail_json(msg = "timed out waiting for image to be reregistered/deleted")
 
     module.exit_json(msg="AMI deregister/delete operation complete", changed=True)
-    sys.exit(0)
 
 
 def update_image(module, ec2):

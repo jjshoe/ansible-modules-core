@@ -27,7 +27,7 @@ module: copy
 version_added: "historical"
 short_description: Copies files to remote locations.
 description:
-     - The M(copy) module copies a file on the local box to remote locations. Use the M(fetch) module to copy files from remote locations to the local box.
+     - The M(copy) module copies a file on the local box to remote locations. Use the M(fetch) module to copy files from remote locations to the local box. If you need variable interpolation in copied files, use the M(template) module.
 options:
   src:
     description:
@@ -80,10 +80,18 @@ options:
   remote_src:
     description:
       - If False, it will search for src at originating/master machine, if True it will go to the remote/target machine for the src. Default is False.
+      - Currently remote_src does not support recursive copying.
     choices: [ "True", "False" ]
     required: false
-    default: "False"
+    default: "no"
     version_added: "2.0"
+  follow:
+    required: false
+    default: "no"
+    choices: [ "yes", "no" ]
+    version_added: "1.8"
+    description:
+      - 'This flag indicates that filesystem links, if they exist, should be followed.'
 extends_documentation_fragment:
     - files
     - validate
@@ -232,9 +240,11 @@ def main():
     remote_src = module.params['remote_src']
 
     if not os.path.exists(src):
-        module.fail_json(msg="Source %s failed to transfer" % (src))
+        module.fail_json(msg="Source %s not found" % (src))
     if not os.access(src, os.R_OK):
         module.fail_json(msg="Source %s not readable" % (src))
+    if os.path.isdir(src):
+        module.fail_json(msg="Remote copy does not support recursive copy of directory: %s" % (src))
 
     checksum_src = module.sha1(src)
     checksum_dest = None
@@ -316,7 +326,7 @@ def main():
             else:
                 module.atomic_move(src, dest)
         except IOError:
-            module.fail_json(msg="failed to copy: %s to %s" % (src, dest))
+            module.fail_json(msg="failed to copy: %s to %s" % (src, dest), traceback=traceback.format_exc())
         changed = True
     else:
         changed = False

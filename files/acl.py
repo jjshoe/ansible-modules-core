@@ -22,8 +22,6 @@ version_added: "1.4"
 short_description: Sets and retrieves file ACL information.
 description:
     - Sets and retrieves file ACL information.
-notes:
-    - As of Ansible 2.0, this module only supports Linux distributions.
 options:
   name:
     required: true
@@ -94,6 +92,7 @@ author:
     - "Jérémie Astori (@astorije)"
 notes:
     - The "acl" module requires that acls are enabled on the target filesystem and that the setfacl and getfacl binaries are installed.
+    - As of Ansible 2.0, this module only supports Linux distributions.
 '''
 
 EXAMPLES = '''
@@ -127,10 +126,17 @@ def split_entry(entry):
     ''' splits entry and ensures normalized return'''
 
     a = entry.split(':')
+
+    d = None
+    if entry.lower().startswith("d"):
+        d = True
+        a.pop(0)
+
     if len(a) == 2:
         a.append(None)
 
     t, e, p = a
+    t = t.lower()
 
     if t.startswith("u"):
         t = "user"
@@ -143,7 +149,7 @@ def split_entry(entry):
     else:
         t = None
 
-    return [t, e, p]
+    return [d, t, e, p]
 
 
 def build_entry(etype, entity, permissions=None):
@@ -176,9 +182,9 @@ def build_command(module, mode, path, follow, default, recursive, entry=''):
 
     if default:
         if(mode == 'rm'):
-            cmd.append('-k')
+            cmd.insert(1, '-k')
         else:  # mode == 'set' or mode == 'get'
-            cmd.append('-d')
+            cmd.insert(1, '-d')
 
     cmd.append(path)
     return cmd
@@ -269,16 +275,18 @@ def main():
         if etype or entity or permissions:
             module.fail_json(msg="'entry' MUST NOT be set when 'entity', 'etype' or 'permissions' are set.")
 
-        if state == 'present' and entry.count(":") != 2:
-            module.fail_json(msg="'entry' MUST have 3 sections divided by ':' when 'state=present'.")
+        if state == 'present' and not entry.count(":") in [2, 3]:
+            module.fail_json(msg="'entry' MUST have 3 or 4 sections divided by ':' when 'state=present'.")
 
-        if state == 'absent' and entry.count(":") != 1:
-            module.fail_json(msg="'entry' MUST have 2 sections divided by ':' when 'state=absent'.")
+        if state == 'absent' and not entry.count(":") in [1, 2]:
+            module.fail_json(msg="'entry' MUST have 2 or 3 sections divided by ':' when 'state=absent'.")
 
         if state == 'query':
             module.fail_json(msg="'entry' MUST NOT be set when 'state=query'.")
 
-        etype, entity, permissions = split_entry(entry)
+        default_flag, etype, entity, permissions = split_entry(entry)
+        if default_flag != None:
+            default = default_flag
 
     changed = False
     msg = ""

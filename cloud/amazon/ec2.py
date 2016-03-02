@@ -236,7 +236,7 @@ options:
   count_tag:
     version_added: "1.5"
     description:
-      - Used with 'exact_count' to determine how many nodes based on a specific tag criteria should be running.  This can be expressed in multiple ways and is shown in the EXAMPLES section.  For instance, one can request 25 servers that are tagged with "class=webserver".
+      - Used with 'exact_count' to determine how many nodes based on a specific tag criteria should be running.  This can be expressed in multiple ways and is shown in the EXAMPLES section.  For instance, one can request 25 servers that are tagged with "class=webserver". The specified tag must already exist or be passed in as the 'instance_tags' option.
     required: false
     default: null
     aliases: []
@@ -308,6 +308,22 @@ EXAMPLES = '''
     monitoring: yes
     vpc_subnet_id: subnet-29e63245
     assign_public_ip: yes
+
+# Single instance with ssd gp2 root volume
+- ec2:
+    key_name: mykey
+    group: webserver
+    instance_type: c3.medium
+    image: ami-123456
+    wait: yes
+    wait_timeout: 500
+    volumes:
+      - device_name: /dev/xvda
+        volume_type: gp2
+        volume_size: 8
+    vpc_subnet_id: subnet-29e63245
+    assign_public_ip: yes
+    exact_count: 1
 
 # Multiple groups example
 - ec2:
@@ -412,7 +428,7 @@ EXAMPLES = '''
 
 - name: Configure instance(s)
   hosts: launched
-  sudo: True
+  become: True
   gather_facts: True
   roles:
     - my_awesome_role
@@ -449,7 +465,7 @@ EXAMPLES = '''
         wait: True
         vpc_subnet_id: subnet-29e63245
         assign_public_ip: yes
-  role:
+  roles:
     - do_neat_stuff
     - do_more_neat_stuff
 
@@ -488,7 +504,6 @@ EXAMPLES = '''
 #
 
 - ec2:
-    state: running
     key_name: mykey
     instance_type: c1.medium
     image: ami-40603AD1
@@ -506,7 +521,6 @@ EXAMPLES = '''
 #
 
 - ec2:
-    state: running
     key_name: mykey
     instance_type: c1.medium
     image: ami-40603AD1

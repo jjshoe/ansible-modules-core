@@ -305,13 +305,13 @@ def main():
     argument_spec = openstack_full_argument_spec(
         network=dict(required=False),
         name=dict(required=False),
-        fixed_ips=dict(default=None),
-        admin_state_up=dict(default=None),
+        fixed_ips=dict(type='list', default=None),
+        admin_state_up=dict(type='bool', default=None),
         mac_address=dict(default=None),
         security_groups=dict(default=None, type='list'),
         no_security_groups=dict(default=False, type='bool'),
-        allowed_address_pairs=dict(default=None),
-        extra_dhcp_opt=dict(default=None),
+        allowed_address_pairs=dict(type='dict', default=None),
+        extra_dhcp_opt=dict(type='dict', default=None),
         device_owner=dict(default=None),
         device_id=dict(default=None),
         state=dict(default='present', choices=['absent', 'present']),
@@ -383,7 +383,7 @@ def main():
             module.exit_json(changed=changed)
 
     except shade.OpenStackCloudException as e:
-        module.fail_json(msg=e.message)
+        module.fail_json(msg=str(e))
 
 # this is magic, see lib/ansible/module_common.py
 from ansible.module_utils.basic import *
