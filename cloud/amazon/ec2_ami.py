@@ -229,7 +229,6 @@ def create_image(module, ec2):
 
         if images and images[0]:
             module.exit_json(msg="AMI name already present", image_id=images[0].id, state=images[0].state, changed=False)
-            sys.exit(0)
 
         if device_mapping:
             bdm = BlockDeviceMapping()
