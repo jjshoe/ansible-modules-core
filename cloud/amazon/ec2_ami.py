@@ -369,7 +369,7 @@ def create_image(module, ec2):
         images = ec2.get_all_images(filters={'name': name})
 
         if images and images[0]:
-            module.exit_json(msg="AMI name already present", image_id=images[0].id, state=images[0].state, changed=False)
+            module.fail_json(msg="AMI name already present", image_id=images[0].id, state=images[0].state, changed=False)
 
         if device_mapping:
             bdm = BlockDeviceMapping()
