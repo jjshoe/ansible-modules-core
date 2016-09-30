@@ -393,7 +393,8 @@ def create_image(module, ec2):
         try:
             img = ec2.get_image(image_id)
 
-            if img.state == 'available':
+            # We must wait for the ami to exist in AWS api responses before we can skip the wait, and add tags when specifying wait: no 
+            if img.state == 'available' or (img and not wait):
                 break
         except boto.exception.EC2ResponseError as e:
             if ('InvalidAMIID.NotFound' not in e.error_code and 'InvalidAMIID.Unavailable' not in e.error_code) and wait and i == wait_timeout - 1:
